@@ -40,3 +40,13 @@ class exsw13(app_manager.RyuApp):
           src=eth.src
           in_port=ev.msg.match['in_port']
           self.mac_to_port[dpid][src]=in_port
+          if dst in self.mac_to_port[dpid]:
+              out_port=self.mac_to_port[dpid][dst]
+          else:
+              out_port=ofproto.OFPP_FLOOD
+          actions=[parser.OFPActionOutput(out_port)]
+          if out_port!=ofproto.OFPP_FLOOD:
+              match=parser.OFPMatch(in_port=in_port,eth_dst=dst,eth_src=src)
+              self.add_flow(datapath,1,match,actions)
+          out=parser.OFPPacketOut(datapath=datapath,buffer_id=ev.msg.buffer_id,in_port=in_port,actions=actions,data=ev.msg.data)
+          datapath.send_msg(out)
