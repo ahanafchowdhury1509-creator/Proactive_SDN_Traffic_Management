@@ -33,12 +33,10 @@ class Monitor(switch.exsw13):
             datapath.send_msg(req)
             req=parser.OFPPortStatsRequest(datapath,0,ofproto.OFPP_ANY)
             datapath.send_msg(req)
-     @set_ev_cls(ofp_event.EventOFFlowStatsReply,MAIN_DISPATCHER )
+     @set_ev_cls(ofp_event.EventOFPFlowStatsReply,MAIN_DISPATCHER )
      def flow_stats_reply_handler(self,ev):
            body=ev.msg.body
-           self.logger.info('datapath         ',
-                            'in-port  eth-dst           '
-                            'out-port packets  bytes')
+           self.logger.info('datapath         in-port  eth-dst           out-port packets  bytes')
            for stat in sorted([flow for flow in body if flow.priority==1],
                               key=lambda flow:(flow.match['in_port'],flow.match['eth_dst'])):
                 self.logger.info('%016x %8x %17s %8x %8d %8d',
@@ -49,9 +47,7 @@ class Monitor(switch.exsw13):
      @set_ev_cls(ofp_event.EventOFPPortStatsReply,MAIN_DISPATCHER)
      def port_stats_reply_handler(self,ev):
            body=ev.msg.body                
-           self.logger.info('datapath         port     ',
-                             'rx-pkts  rx-bytes rx-error '
-                            'tx-pkts  tx-bytes tx-error')
+           self.logger.info('datapath         port     rx-pkts  rx-bytes rx-error  tx-pkts  tx-bytes tx-error')
            for stat in sorted(body,key=attrgetter('port_no')):
                  self.logger.info('%016x %8x %8d %8d %8d %8d %8d %8d',
                                   ev.msg.datapath.id,stat.port_no,
