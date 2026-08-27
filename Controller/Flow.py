@@ -9,5 +9,56 @@ class Flow(app_manager.RyuApp):
        print("DataPath is: ",datapath.id)
        ofp=datapath.ofproto
        parser=datapath.ofproto_parser
-       match=parser.OFPMatch(eth_dst="ff:ff:ff:ff:ff:ff")
-       
+       match=parser.OFPMatch(eth_dst="00:00:00:00:00:01")
+       actions=[parser.OFPActionOutput(1)]
+       inst=parser.OFPFlowMod(
+            datapath=datapath,
+            priority=100,
+            match=match,
+            instructions=[
+            parser.OFPInstructionActions(
+                ofp.OFPIT_APPLY_ACTIONS,
+                actions)])
+       datapath.send_msg(inst)
+       match=parser.OFPMatch(eth_dst="00:00:00:00:00:02")
+       actions=[parser.OFPActionOutput(2)]
+       inst=parser.OFPFlowMod(datapath=datapath,
+                              priority=100,
+                              match=match,
+                              instructions=[
+                                  parser.OFPInstructionActions(
+                                      ofp.OFPIT_APPLY_ACTIONS,
+                                      actions)
+                              ])
+       datapath.send_msg(inst)
+       match=parser.OFPMatch(eth_dst="00:00:00:00:00:03")   
+       actions=[parser.OFPActionOutput(3)]
+       inst=parser.OFPFlowMod(datapath=datapath,
+                                priority=100,
+                                match=match,
+                                instructions=[
+                                     parser.OFPInstructionActions(
+                                          ofp.OFPIT_APPLY_ACTIONS,
+                                          actions)
+                                ])
+       datapath.send_msg(inst)
+       match = parser.OFPMatch(
+       eth_dst="ff:ff:ff:ff:ff:ff"
+            )
+
+       actions = [
+        parser.OFPActionOutput(ofp.OFPP_FLOOD)
+]
+
+       inst = parser.OFPFlowMod(
+       datapath=datapath,
+       priority=50,
+       match=match,
+       instructions=[
+        parser.OFPInstructionActions(
+            ofp.OFPIT_APPLY_ACTIONS,
+            actions
+        )
+    ]
+)
+       datapath.send_msg(inst)
