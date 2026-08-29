@@ -4,11 +4,13 @@ from ryu.topology.api import get_switch,get_link
 from ryu.base import app_manager
 from ryu.controller.handler import set_ev_cls
 from Controller.Flow import add_flow
+from ryu.lib import hub
 class Routing(app_manager.RyuApp):
      def __init__(self,*args,**kwargs):
          super(Routing,self).__init__(*args,**kwargs)
          self.graph={}
          self.path_inst=False
+         self.monitor_thread=hub.spawn(self._reroute_loop)
      @set_ev_cls(event.EventSwitchEnter)
      def switch_enter_handler(self,ev):
            switch_id=ev.switch.dp.id
@@ -27,7 +29,7 @@ class Routing(app_manager.RyuApp):
               if src not in self.graph[dst]:
                   self.graph[dst][src]=ev.link.dst.port_no
               self.logger.info("Current graph: %s", self.graph)
-              if (len(self.graph)>=4 and all(len(neighbors)==2 for neighbors in self.graph.values()) and not self.path_inst):
+              if (len(self.graph)>=4 and all(len(neighbors)>=1 for neighbors in self.graph.values()) and not self.path_inst):
                   self.path_inst=True
                   path=bfs_path(self.graph,1,4)
                   ports=path_to_ports(self.graph,path)
@@ -46,7 +48,17 @@ class Routing(app_manager.RyuApp):
                match=parser.OFPMatch(eth_dst=dst_mac)
                actions=[parser.OFPActionOutput(out_port)]
                add_flow(datapath,1,match,actions)
-def bfs_path(graph,start,goal):
+     def _reroute_loop(self):
+        while True:
+         hub.sleep(15)
+         if(len(self.graph)>=4 and all(len(neighbors)>=1 for neighbors in self.graph.values())):
+             self.logger.info("Rerouting:Avoiding switch2 now")
+             path=bfs_path(self.graph,1,4,avoid={2})
+             ports=path_to_ports(self.graph,path)
+             self.install_path(path,ports,"00:00:00:00:00:02")
+def bfs_path(graph,start,goal,avoid=None):
+    if avoid==None:
+        avoid=set()
     queue=deque()
     queue.append(start)
     came_from={start:None}
@@ -55,7 +67,7 @@ def bfs_path(graph,start,goal):
         if cur==goal:
             break
         for neigh in graph[cur]:
-            if neigh not in came_from:
+            if neigh not in came_from and neigh not in avoid:
                 queue.append(neigh)
                 came_from[neigh]=cur
     path=[]
