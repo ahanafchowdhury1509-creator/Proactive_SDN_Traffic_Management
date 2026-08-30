@@ -7,7 +7,8 @@ from ryu.lib import hub
 class Monitor(switch.exsw13):
      def __init__(self,*args,**kwargs):
             super(Monitor,self).__init__(*args,**kwargs)
-            self.datapaths={}
+            self.datapaths ={}
+            self.port_stats={}
             self.monitor_thread=hub.spawn(self.__monitor)
      @set_ev_cls(ofp_event.EventOFPStateChange,[MAIN_DISPATCHER,DEAD_DISPATCHER])
      def state_change_handler(self,ev):
@@ -19,7 +20,7 @@ class Monitor(switch.exsw13):
             elif ev.state==DEAD_DISPATCHER:
                 if datapath.id in self.datapaths:
                     self.logger.debug('unregister datapath:%016x',datapath.id)
-                    del self.datapath[datapath.id]
+                    del self.datapaths[datapath.id]
      def __monitor(self):
           while True:
                 for dp in self.datapaths.values():
@@ -53,3 +54,5 @@ class Monitor(switch.exsw13):
                                   ev.msg.datapath.id,stat.port_no,
                                   stat.rx_packets,stat.rx_bytes,stat.rx_errors,
                                   stat.tx_packets,stat.tx_bytes,stat.tx_errors)
+                 self.port_stats[(ev.msg.datapath.id,stat.port_no)]=stat.tx_bytes
+                 

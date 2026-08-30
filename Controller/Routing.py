@@ -5,12 +5,16 @@ from ryu.base import app_manager
 from ryu.controller.handler import set_ev_cls
 from Controller.Flow import add_flow
 from ryu.lib import hub
+from Controller.monitor import Monitor
 class Routing(app_manager.RyuApp):
+     _CONTEXTS={'monitor':Monitor}
+      
      def __init__(self,*args,**kwargs):
          super(Routing,self).__init__(*args,**kwargs)
          self.graph={}
          self.path_inst=False
          self.monitor_thread=hub.spawn(self._reroute_loop)
+         self.monitor=kwargs['monitor']
      @set_ev_cls(event.EventSwitchEnter)
      def switch_enter_handler(self,ev):
            switch_id=ev.switch.dp.id
