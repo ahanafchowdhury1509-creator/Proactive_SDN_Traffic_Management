@@ -15,6 +15,7 @@ class Routing(app_manager.RyuApp):
          self.path_inst=False
          self.monitor_thread=hub.spawn(self._reroute_loop)
          self.monitor=kwargs['monitor']
+         self.prev_port_stats={}
      @set_ev_cls(event.EventSwitchEnter)
      def switch_enter_handler(self,ev):
            switch_id=ev.switch.dp.id
@@ -56,8 +57,17 @@ class Routing(app_manager.RyuApp):
         while True:
          hub.sleep(15)
          if(len(self.graph)>=4 and all(len(neighbors)>=1 for neighbors in self.graph.values())):
+             current=self.monitor.port_stats
+             avoid_set=set()
+             for (dpid,port),byte_count in current.items():
+                 prev=self.prev_port_stats.get((dpid,port),0)
+                 utilization=byte_count-prev
+                 if utilization>5000:
+                     self.logger.info("High utilization on switch %s port %s: %s bytes", dpid, port, utilization)
+                     avoid_set.add(dpid)
+             self.prev_port_stats=current.copy()
              self.logger.info("Rerouting:Avoiding switch2 now")
-             path=bfs_path(self.graph,1,4,avoid={2})
+             path=bfs_path(self.graph,1,4,avoid=avoid_set)
              ports=path_to_ports(self.graph,path)
              self.install_path(path,ports,"00:00:00:00:00:02")
 def bfs_path(graph,start,goal,avoid=None):
