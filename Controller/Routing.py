@@ -6,6 +6,7 @@ from ryu.controller.handler import set_ev_cls
 from Controller.Flow import add_flow
 from ryu.lib import hub
 from Controller.monitor import Monitor
+import csv
 class Routing(app_manager.RyuApp):
      _CONTEXTS={'monitor':Monitor}
       
@@ -47,7 +48,11 @@ class Routing(app_manager.RyuApp):
           for i in range(len(ports)):
                switch_id=path[i]
                out_port=ports[i]
-               switch=get_switch(self,switch_id)[0]
+               switch=get_switch(self,switch_id)
+               if not switch:
+                     self.logger.error("Switch %s not found in topology", switch_id)
+                     continue
+               switch=switch[0]                   
                datapath=switch.dp
                parser=datapath.ofproto_parser
                match=parser.OFPMatch(eth_dst=dst_mac)
@@ -65,9 +70,19 @@ class Routing(app_manager.RyuApp):
                  if utilization>5000:
                      self.logger.info("High utilization on switch %s port %s: %s bytes", dpid, port, utilization)
                      avoid_set.add(dpid)
+                 with open('ML/dataset.csv','a',newline='') as f:
+                    writer=csv.writer(f)
+                    label= 1 if utilization>5000 else 0
+                    writer.writerow([dpid,port,utilization,label])
+                    
              self.prev_port_stats=current.copy()
              self.logger.info("Rerouting:Avoiding switch2 now")
+             avoid_set.discard(1)
+             avoid_set.discard(4)
              path=bfs_path(self.graph,1,4,avoid=avoid_set)
+             if path[-1]!=4:
+                    self.logger.warning("No valid path found from switch 1 to switch 4 avoiding %s", avoid_set)
+                    path=bfs_path(self.graph,1,4)
              ports=path_to_ports(self.graph,path)
              self.install_path(path,ports,"00:00:00:00:00:02")
 def bfs_path(graph,start,goal,avoid=None):
