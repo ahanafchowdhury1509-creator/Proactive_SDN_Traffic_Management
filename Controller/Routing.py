@@ -67,13 +67,14 @@ class Routing(app_manager.RyuApp):
              for (dpid,port),byte_count in current.items():
                  prev=self.prev_port_stats.get((dpid,port),0)
                  utilization=byte_count-prev
-                 if utilization>5000:
+                 if utilization>100000:
                      self.logger.info("High utilization on switch %s port %s: %s bytes", dpid, port, utilization)
                      avoid_set.add(dpid)
-                 with open('ML/dataset.csv','a',newline='') as f:
-                    writer=csv.writer(f)
-                    label= 1 if utilization>5000 else 0
-                    writer.writerow([dpid,port,utilization,label])
+                 if port != 4294967294:    
+                    with open('ML/dataset.csv','a',newline='') as f:
+                        writer=csv.writer(f)
+                        label= 1 if utilization>100000 else 0
+                        writer.writerow([dpid,port,utilization,label])
                     
              self.prev_port_stats=current.copy()
              self.logger.info("Rerouting:Avoiding switch2 now")
